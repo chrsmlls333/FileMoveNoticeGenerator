@@ -11,11 +11,11 @@ on run
 	processProperties()
 	
 	-- DEBUG
-	--set f to {"/Users/cmills/Box/Public/Programs and Exhibitions/Exhibitions/Hudson Showroom/21.1 After Carolee/Artists/Ayanna Jolivet Mccloud/Audio File/01.19.21 - Ayanna Mccloud Balm Video", "/Users/cmills/Box/Public/Programs and Exhibitions/Exhibitions/Hudson Showroom/21.1 After Carolee/Artists/Ayanna Jolivet Mccloud/Audio File/balm sound.mp3", "/Users/cmills/Box/Public/Programs and Exhibitions/Exhibitions/Hudson Showroom/21.1 After Carolee/Artists/Ayanna Jolivet Mccloud/Audio File/balm sound.wav"}
-	
+	--set f to {"paths"}
 	--open (convertPathstoAliases(f))
+	-- END DEBUG
 	
-	display dialog "This droplet will process files dragged onto its icon." & linefeed & linefeed & "There is a user-settable preference for displaying an alert dialog when the droplet encounters a dragged-on item that is not a file of the type processed by the droplet." buttons {"Select Files", "Done"} default button 2 with title "My File Processing Droplet"
+	display dialog "This droplet will process files dragged onto its icon, then ask you where these files are going." & linefeed & linefeed & "A simple logfile will be created next to the origin." & linefeed & "Actual copying for you is not yet implemented." & linefeed & "Checksum validation would be nice too." & linefeed & linefeed & "This is a very exciting app." & linefeed & tab & "--Chris Mills, Artpace 2021" buttons {"Select Files", "Done"} default button 2 with title "Create Notice for Moved Files"
 	if the button returned of the result is "Select Files" then
 		set input to choose file with prompt "Please select some files to relocate:" with multiple selections allowed
 		set output to choose folder with prompt "Please select an output folder:"
@@ -41,11 +41,11 @@ on open these_items
 	processProperties()
 	
 	set fileList to {}
-	set logDest to ""
+	set logDest to rootPath -- default
 	
 	repeat with i from 1 to the count of these_items
 		set this_item to item i of these_items
-		set the item_info to info for this_item
+		set item_info to info for this_item
 		set this_name to the name of the item_info
 		if (folder of the item_info is true) then
 			
@@ -54,16 +54,11 @@ on open these_items
 			end tell
 			
 			set fileList to fileList & f
-			set logDest to this_item as alias
 		else
 			set end of fileList to this_item
-			tell application "Finder" to set logDest to (container of this_item) as alias
 		end if
+		tell application "Finder" to set logDest to (container of this_item) as alias
 	end repeat
-	
-	--repeat with thisFile in fileList
-	--set end of pathList to POSIX path of thisFile
-	--end repeat
 	
 	set output to choose folder with prompt "Please select an output folder:"
 	
@@ -77,6 +72,7 @@ end open
 
 on log {fileList, destinationFolder, logFolder}
 	
+	-- Variables
 	set appPath to the POSIX path of rootPath
 	set destinationPath to POSIX path of destinationFolder
 	set logPath to POSIX path of alias logFolder
@@ -84,34 +80,52 @@ on log {fileList, destinationFolder, logFolder}
 	set computerName to computer name of (system info)
 	set userName to long user name of (system info)
 	
-	set txt to ("Date: " & (theDate as text) & return & "Computer: " & computerName & return & "User: " & userName & return & return)
-	
+	-- Collect Paths and Sort
 	set pathList to {}
 	repeat with thisFile in fileList
 		set end of pathList to POSIX path of (thisFile as alias)
 	end repeat
+	set pathList to simple_sort(pathList)
 	
+	-- Shorten Paths (if possible)
 	if (count of pathList) is greater than 1 then
 		set commPath to commonPath(pathList)
 		set pathList to findAndReplaceInTextList(pathList, commPath, "./")
-		set txt to (txt & "Source: " & return & tab & commPath & return & return)
 	end if
 	
-	set txt to (txt & "Contents: " & return)
 	
+	-- Log Text
+	set txt to "Date: " & (theDate as text) & return & "Computer: " & computerName & return & "User: " & userName & return & return
+	if (count of pathList) is greater than 1 then
+		set txt to txt & "Source: " & return & tab & commPath & return & return
+	end if
+	set txt to (txt & "Contents: " & return)
 	repeat with thisPath in pathList
 		set txt to txt & tab & thisPath & return
 	end repeat
-	
 	set txt to txt & return & "Destination: " & return & tab & destinationPath & return & return
 	
-	if actuallyCopy is false then set txt to txt & "The creation of this log did not copy the noted files. That should have been ensured by the user noted above."
+	if actuallyCopy is false then set txt to txt & "The creation of this log did not copy the noted files." & return & "That should have been ensured by the user noted above."
 	
+	-- Escape Chars (might not be necessary using the quoted form of txt below)
 	set txt to findAndReplaceInText(txt, "(", "\\(")
 	set txt to findAndReplaceInText(txt, ")", "\\)")
 	
-	do shell script "echo " & txt & " > " & quoted form of (logPath & "Files Moved Notice.txt")
+	-- Create Text File
+	do shell script "echo " & quoted form of txt & " > " & quoted form of (logPath & "Files Moved Notice.txt")
 	
+	-- Open 
+	tell application "TextEdit" to open convertPathToAlias(logPath & "Files Moved Notice.txt")
+	
+	(*
+	tell application "TextEdit"
+		activate
+		make new document
+		set theDate to current date
+		set text of document 1 to txt
+		save document 1 in (appPath & "File Moved.txt")
+	end tell
+	*)
 end log
 
 
@@ -208,27 +222,5 @@ on findAndReplaceInTextList(theTextList, theSearchString, theReplacementString)
 	return outputList
 end findAndReplaceInTextList
 
--- this sub-routine processes files 
-(*
-on process_item(this_item)
-	-- NOTE that the variable this_item is a file reference in alias format 
-	-- PLACE YOUR FILE PROCESSING STATEMENTS HERE 
-	set thePath to the POSIX path of this_item
-	set appPath to the POSIX path of rootPath
-	set theDate to current date
-	
-	set txt to ("Date: " & (theDate as text) & return & "Contents:" & "" & return & "Destination: " & return & tab & thePath)
-	
-	do shell script "echo " & txt & " > \"" & (appPath & "File Moved.txt") & "\""
-	
-	(*
-	tell application "TextEdit"
-		activate
-		make new document
-		set theDate to current date
-		set text of document 1 to txt
-		save document 1 in (appPath & "File Moved.txt")
-	end tell
-	*)
-end process_item
-*)
+
+
