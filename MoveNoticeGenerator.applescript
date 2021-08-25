@@ -108,8 +108,8 @@ on log {fileList, destinationFolder, logFolder}
 	if actuallyCopy is false then set txt to txt & "The creation of this log did not copy the noted files." & return & "That should have been ensured by the user noted above."
 	
 	-- Escape Chars (might not be necessary using the quoted form of txt below)
-	set txt to findAndReplaceInText(txt, "(", "\\(")
-	set txt to findAndReplaceInText(txt, ")", "\\)")
+	-- set txt to findAndReplaceInText(txt, "(", "\\(")
+	-- set txt to findAndReplaceInText(txt, ")", "\\)")
 	
 	-- Create Text File
 	do shell script "echo " & quoted form of txt & " > " & quoted form of (logPath & "Files Moved Notice.txt")
