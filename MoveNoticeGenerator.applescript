@@ -114,9 +114,6 @@ on log {fileList, destinationFolder, logFolder}
 	-- Create Text File
 	do shell script "echo " & quoted form of txt & " > " & quoted form of (logPath & "Files Moved Notice.txt")
 	
-	-- Open 
-	tell application "TextEdit" to open convertPathToAlias(logPath & "Files Moved Notice.txt")
-	
 	(*
 	tell application "TextEdit"
 		activate
